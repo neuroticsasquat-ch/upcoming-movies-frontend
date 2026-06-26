@@ -87,6 +87,29 @@ describe("FilmMeta", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("renders nothing when vote_average is null and it is the only would-be signal", () => {
+    const { container } = render(
+      <FilmMeta
+        film={makeFilm({
+          overview: null,
+          tagline: null,
+          runtime: null,
+          genres: [],
+          vote_average: null,
+          vote_count: 500,
+          original_language: null,
+          backdrop_path: null,
+          production_companies: [],
+          collection: null,
+          release_date: null,
+        })}
+      />,
+    );
+
+    // hasAnyMeta must stay consistent with the rating render gate
+    expect(container.firstChild).toBeNull();
+  });
+
   describe("rating gate", () => {
     it("hides rating when vote_count is 0", () => {
       render(<FilmMeta film={makeFilm({ vote_count: 0, vote_average: 0.0 })} />);
@@ -101,6 +124,16 @@ describe("FilmMeta", () => {
     it("hides rating when vote_count is null", () => {
       render(<FilmMeta film={makeFilm({ vote_count: null, vote_average: 8.0 })} />);
       expect(screen.queryByText(/\/10/)).toBeNull();
+    });
+
+    it("hides rating when vote_average is null even with votes", () => {
+      render(<FilmMeta film={makeFilm({ vote_count: 500, vote_average: null })} />);
+      expect(screen.queryByText(/\/10/)).toBeNull();
+    });
+
+    it("exposes the rating via an accessible label", () => {
+      render(<FilmMeta film={makeFilm({ vote_count: 500, vote_average: 6.5 })} />);
+      expect(screen.getByLabelText(/rating: 6\.5 out of 10/i)).toBeInTheDocument();
     });
   });
 

@@ -1,6 +1,6 @@
 import type { FilmDetail } from "@/api/types";
 import { formatEventDate, formatLanguage, formatRuntime } from "@/lib/format";
-import { backdropUrl } from "@/lib/poster";
+import { posterUrl } from "@/lib/poster";
 
 /** Supplemental metadata section: tagline, backdrop, meta line, rating, genres,
  *  production companies, collection, and overview. Returns null when no data is present. */
@@ -11,7 +11,7 @@ export function FilmMeta({ film }: { film: FilmDetail }) {
     !!film.release_date ||
     (film.runtime != null && film.runtime > 0) ||
     !!film.original_language ||
-    (film.vote_count != null && film.vote_count > 0) ||
+    (film.vote_average != null && film.vote_count != null && film.vote_count > 0) ||
     film.genres.length > 0 ||
     film.production_companies.length > 0 ||
     !!film.collection ||
@@ -26,30 +26,35 @@ export function FilmMeta({ film }: { film: FilmDetail }) {
   if (film.original_language) metaPieces.push(formatLanguage(film.original_language));
   const metaLine = metaPieces.join(" · ");
 
-  const backdrop = backdropUrl(film.backdrop_path, "w780");
+  const backdrop = posterUrl(film.backdrop_path, "w780");
 
   return (
     <section className="mt-6 space-y-3">
       {/* 1. Tagline */}
       {film.tagline && <p className="italic text-gray-500 text-sm">{film.tagline}</p>}
 
-      {/* 2. Backdrop */}
+      {/* 2. Backdrop — fixed-ratio wrapper reserves space to avoid layout shift (CLS) */}
       {backdrop && (
-        <img
-          src={backdrop}
-          alt={`${film.title} backdrop`}
-          loading="lazy"
-          className="w-full rounded-lg object-cover"
-        />
+        <div className="aspect-[16/9] overflow-hidden rounded-lg">
+          <img
+            src={backdrop}
+            alt={`${film.title} backdrop`}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        </div>
       )}
 
       {/* 3. Meta line */}
       {metaLine && <p className="text-sm text-gray-600">{metaLine}</p>}
 
       {/* 4. Rating */}
-      {film.vote_count != null && film.vote_count > 0 && (
-        <p className="text-sm text-gray-700">
-          <span>{film.vote_average?.toFixed(1)} /10</span>
+      {film.vote_average != null && film.vote_count != null && film.vote_count > 0 && (
+        <p
+          className="text-sm text-gray-700"
+          aria-label={`Rating: ${film.vote_average.toFixed(1)} out of 10`}
+        >
+          {film.vote_average.toFixed(1)} /10
         </p>
       )}
 
