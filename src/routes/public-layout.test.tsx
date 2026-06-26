@@ -27,16 +27,14 @@ describe("PublicLayout", () => {
     // 2. Enabled nav links — scoped to the primary nav to avoid footer duplicates
     const primaryNav = screen.getByRole("navigation", { name: /primary navigation/i });
     expect(within(primaryNav).getByRole("link", { name: /^home$/i })).toBeInTheDocument();
-    expect(within(primaryNav).getByRole("link", { name: /^browse$/i })).toBeInTheDocument();
 
-    // 3. Disabled nav seats — present but not links
-    const searchEl = within(primaryNav).getByText(/^search$/i);
-    expect(searchEl).toHaveAttribute("aria-disabled", "true");
-    expect(searchEl.tagName).not.toBe("A");
-
-    const calendarEl = within(primaryNav).getByText(/^calendar$/i);
-    expect(calendarEl).toHaveAttribute("aria-disabled", "true");
-    expect(calendarEl.tagName).not.toBe("A");
+    // 3. Disabled nav seats — present but not links (no route yet → would 404)
+    for (const label of [/^browse$/i, /^search$/i, /^calendar$/i]) {
+      expect(within(primaryNav).queryByRole("link", { name: label })).toBeNull();
+      const seat = within(primaryNav).getByText(label);
+      expect(seat).toHaveAttribute("aria-disabled", "true");
+      expect(seat.tagName).not.toBe("A");
+    }
 
     // 4. Footer — wordmark text in copyright line
     const footer = screen.getByRole("contentinfo");

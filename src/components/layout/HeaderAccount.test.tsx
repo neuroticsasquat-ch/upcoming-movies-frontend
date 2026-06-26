@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
@@ -8,7 +8,7 @@ import { env } from "@/env";
 import { server } from "@/test/msw/server";
 import { meHandler, unauthMeHandler } from "@/test/msw/me";
 import { AuthProvider } from "@/components/AuthContext";
-import { AccountArea } from "./HeaderAccount";
+import { AccountArea, accountQueryClient } from "./HeaderAccount";
 import HeaderAccount from "./HeaderAccount";
 
 function renderAccountArea() {
@@ -25,6 +25,11 @@ function renderAccountArea() {
 }
 
 describe("HeaderAccount", () => {
+  // The default export uses the module-level `accountQueryClient` singleton, which
+  // persists across tests in this file. Reset it between cases so the singleton-dependent
+  // tests below are order-independent.
+  afterEach(() => accountQueryClient.clear());
+
   it("shows Login and Sign up links when unauthenticated", async () => {
     server.use(unauthMeHandler());
     renderAccountArea();
@@ -74,5 +79,30 @@ describe("HeaderAccount", () => {
     );
     // Synchronous — module-level client is cache cold, so user is null → logged-out default
     expect(screen.getByRole("link", { name: /log in/i })).toBeInTheDocument();
+  });
+
+  it("refetches /me on remount so the header reflects a session established elsewhere", async () => {
+    // First mount (public route, logged out): caches me=null in the singleton client.
+    server.use(unauthMeHandler());
+    const { unmount } = render(
+      <MemoryRouter>
+        <HeaderAccount />
+      </MemoryRouter>,
+    );
+    await screen.findByRole("link", { name: /log in/i });
+    unmount();
+
+    // User logs in via the SPA shell (a separate QueryClient) — the singleton's cached
+    // me=null is still within staleTime. The session now exists server-side.
+    server.use(meHandler({ is_admin: false }));
+    render(
+      <MemoryRouter>
+        <HeaderAccount />
+      </MemoryRouter>,
+    );
+
+    // refetchOnMount:"always" forces a fresh /me despite the still-fresh cached null,
+    // so the header updates to the authed state instead of remaining "Log in".
+    expect(await screen.findByRole("button", { name: /log out/i })).toBeInTheDocument();
   });
 });

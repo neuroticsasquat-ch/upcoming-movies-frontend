@@ -2,13 +2,29 @@ import { Link } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/components/AuthContext";
 
-// Module-level QueryClient for production hydration stability (mirrors spa-layout.tsx).
-// Tests must NOT use this instance — use a fresh per-test QueryClient instead.
-const moduleClient = new QueryClient({
+// Module-level QueryClient for the public account island; persists across navigations
+// within the public layout.
+//
+// SSR-safe by invariant: this singleton is shared across SSR requests in the same
+// worker isolate, but the `["me"]` query never resolves during the server render pass,
+// so no user-specific data is ever cached server-side (unlike spa-layout.tsx, whose
+// client never instantiates on the server because that subtree is client-only).
+//
+// `refetchOnMount: "always"` matters because this island lives in a separate layout
+// (and separate QueryClient) from the authed app where login happens. Without it, a
+// `me=null` cached here while logged out would stay "fresh" for `staleTime`, so the
+// header could keep showing "Log in" after the user authenticated in the SPA shell and
+// navigated back. Forcing a refetch on every mount keeps the header in sync; the cold
+// cache still yields a synchronous logged-out first paint (no hydration mismatch).
+//
+// Exported so the singleton-dependent tests can reset it between cases.
+// eslint-disable-next-line react-refresh/only-export-components -- shared singleton, not a component
+export const accountQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
+      refetchOnMount: "always",
     },
   },
 });
@@ -61,7 +77,7 @@ export function AccountArea() {
  */
 export default function HeaderAccount() {
   return (
-    <QueryClientProvider client={moduleClient}>
+    <QueryClientProvider client={accountQueryClient}>
       <AuthProvider>
         <AccountArea />
       </AuthProvider>
