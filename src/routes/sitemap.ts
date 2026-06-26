@@ -1,6 +1,17 @@
 import type { Route } from "./+types/sitemap";
 import { cloudflareContext } from "@/lib/load-context";
 
+export function injectBrowseUrl(xml: string): string {
+  const locMatch = xml.match(/<loc>([\s\S]*?)<\/loc>/);
+  if (!locMatch) return xml;
+  const base = locMatch[1].replace(/\/$/, "");
+  const browseEntry = `<url><loc>${base}/browse</loc></url>`;
+  const closeTag = "</urlset>";
+  const closeIndex = xml.lastIndexOf(closeTag);
+  if (closeIndex === -1) return xml;
+  return xml.slice(0, closeIndex) + browseEntry + xml.slice(closeIndex);
+}
+
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   let upstream: Response;
@@ -12,7 +23,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       headers: { "Content-Type": "application/xml; charset=utf-8" },
     });
   }
-  const body = await upstream.text();
+  const body = injectBrowseUrl(await upstream.text());
   return new Response(body, {
     status: upstream.status,
     headers: {
