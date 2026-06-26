@@ -19,10 +19,6 @@ export function injectFeRoutes(xml: string, routes: string[]): string {
   return xml.slice(0, closeIndex) + entries + xml.slice(closeIndex);
 }
 
-export function injectBrowseUrl(xml: string): string {
-  return injectFeRoutes(xml, ["/browse"]);
-}
-
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   let upstream: Response;

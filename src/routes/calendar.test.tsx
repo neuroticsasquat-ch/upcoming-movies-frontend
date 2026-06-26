@@ -84,7 +84,7 @@ describe("calendar route render", () => {
       },
       { path: "/film/:slug", Component: () => null },
     ]);
-    render(<Stub initialEntries={["/calendar"]} />);
+    const { container } = render(<Stub initialEntries={["/calendar"]} />);
 
     // Both date headings render
     expect(await screen.findByText(/July 4, 2026/)).toBeInTheDocument();
@@ -103,11 +103,9 @@ describe("calendar route render", () => {
     expect(avatar).toHaveAttribute("href", "/film/avatar-3-2026");
 
     // Soonest-first DOM order: July 4 heading appears before July 11 heading
-    const headings = screen.getAllByRole("time");
-    const firstHeadingText = headings[0].textContent ?? "";
-    const lastHeadingText = headings[headings.length - 1].textContent ?? "";
-    expect(firstHeadingText).toMatch(/July 4, 2026/);
-    expect(lastHeadingText).toMatch(/July 11, 2026/);
+    const timeEls = container.querySelectorAll("time");
+    expect(timeEls[0].textContent).toMatch(/July 4, 2026/);
+    expect(timeEls[timeEls.length - 1].textContent).toMatch(/July 11, 2026/);
   });
 
   it("shows the empty state when there are no releases", async () => {
