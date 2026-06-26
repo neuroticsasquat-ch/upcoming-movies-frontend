@@ -94,7 +94,7 @@ export interface FilmIndexItem {
   title: string;
   release_year: number | null;
   poster_path: string | null; // raw TMDB path; FE builds the URL via posterUrl()
-  arc_stage: string;
+  arc_stage: ArcStage; // mirrors the backend; not rendered on /browse yet (reserved for a future badge)
 }
 
 export interface FilmIndexResponse {

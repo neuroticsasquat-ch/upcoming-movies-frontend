@@ -14,12 +14,21 @@ export function FilmPosterCard({ item }: { item: FilmIndexItem }) {
       {/* 2:3 aspect poster area */}
       <div className="aspect-[2/3] w-full overflow-hidden bg-gray-100">
         {poster ? (
-          <img src={poster} alt={`${item.title} poster`} className="h-full w-full object-cover" />
+          <img
+            src={poster}
+            alt={`${item.title} poster`}
+            width={342}
+            height={513}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div
             data-testid="poster-placeholder"
-            className="flex h-full w-full items-center justify-center bg-gray-200 text-gray-400"
-          />
+            className="flex h-full w-full items-center justify-center bg-gray-200 text-xs text-gray-400"
+          >
+            No poster
+          </div>
         )}
       </div>
 

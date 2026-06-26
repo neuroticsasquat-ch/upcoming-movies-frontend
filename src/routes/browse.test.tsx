@@ -107,6 +107,41 @@ describe("browse route meta", () => {
     );
   });
 
+  it("self-canonicalizes page 1 to the bare /browse URL", () => {
+    const tags = meta({
+      loaderData: { films, page: 1, totalPages: 1 },
+      location: { pathname: "/browse" },
+    } as unknown as Parameters<typeof meta>[0]);
+    const canonical = tags.find(
+      (t) => "tagName" in t && t.tagName === "link" && t.rel === "canonical",
+    ) as { href: string } | undefined;
+    expect(canonical?.href).toMatch(/\/browse$/);
+    const ogUrl = tags.find((t) => "property" in t && t.property === "og:url") as
+      | { content: string }
+      | undefined;
+    expect(ogUrl?.content).toMatch(/\/browse$/);
+  });
+
+  it("self-canonicalizes page 2 to /browse?page=2 and points rel=prev at the bare URL", () => {
+    const tags = meta({
+      loaderData: { films: { ...films, total: 72 }, page: 2, totalPages: 2 },
+      location: { pathname: "/browse" },
+    } as unknown as Parameters<typeof meta>[0]);
+    const canonical = tags.find(
+      (t) => "tagName" in t && t.tagName === "link" && t.rel === "canonical",
+    ) as { href: string } | undefined;
+    expect(canonical?.href).toMatch(/\/browse\?page=2$/);
+    const ogUrl = tags.find((t) => "property" in t && t.property === "og:url") as
+      | { content: string }
+      | undefined;
+    expect(ogUrl?.content).toMatch(/\/browse\?page=2$/);
+    const prev = tags.find((t) => "tagName" in t && t.tagName === "link" && t.rel === "prev") as
+      | { href: string }
+      | undefined;
+    expect(prev?.href).toMatch(/\/browse$/);
+    expect(prev?.href).not.toMatch(/\?page=/);
+  });
+
   it("includes rel=next when page < totalPages", () => {
     const tags = meta({
       loaderData: { films: { ...films, total: 72 }, page: 1, totalPages: 2 },
@@ -181,5 +216,28 @@ describe("browse route render", () => {
     ]);
     render(<Stub initialEntries={["/browse"]} />);
     expect(await screen.findByText(/no films tracked yet/i)).toBeInTheDocument();
+  });
+
+  it("shows a past-the-end message (not the empty-catalog copy) when items=[] but total>0", async () => {
+    const pastEnd: FilmIndexResponse = {
+      items: [],
+      total: 2,
+      limit: PAGE_SIZE,
+      offset: PAGE_SIZE * 4,
+    };
+    const Stub = createRoutesStub([
+      {
+        path: "/browse",
+        Component: BrowsePage,
+        loader: () => ({ films: pastEnd, page: 5, totalPages: 1 }),
+      },
+    ]);
+    render(<Stub initialEntries={["/browse?page=5"]} />);
+    expect(await screen.findByText(/past the end of the list/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no films tracked yet/i)).toBeNull();
+    expect(screen.getByRole("link", { name: /back to the first page/i })).toHaveAttribute(
+      "href",
+      "/browse",
+    );
   });
 });

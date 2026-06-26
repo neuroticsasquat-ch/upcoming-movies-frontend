@@ -43,10 +43,19 @@ describe("FilmPosterCard", () => {
     expect(img).toHaveAttribute("src", "https://image.tmdb.org/t/p/w342/odyssey.jpg");
   });
 
-  it("renders a placeholder tile (no img) when poster_path is null", () => {
+  it("lazy-loads the poster image with intrinsic dimensions", () => {
+    renderCard();
+    const img = screen.getByRole("img", { name: /the odyssey poster/i });
+    expect(img).toHaveAttribute("loading", "lazy");
+    expect(img).toHaveAttribute("width", "342");
+    expect(img).toHaveAttribute("height", "513");
+  });
+
+  it("renders a placeholder tile (no img) with a 'No poster' hint when poster_path is null", () => {
     renderCard({ poster_path: null });
     expect(screen.queryByRole("img")).toBeNull();
     expect(screen.getByTestId("poster-placeholder")).toBeInTheDocument();
+    expect(screen.getByText(/no poster/i)).toBeInTheDocument();
   });
 
   it("omits the year line when release_year is null", () => {

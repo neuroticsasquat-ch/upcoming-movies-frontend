@@ -21,23 +21,29 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export function meta({ loaderData, location }: Route.MetaArgs): Route.MetaDescriptors {
+  // Self-canonicalize per page: page 1 → bare /browse, page N → /browse?page=N. A canonical
+  // that always pointed to page 1 would tell Google pages 2+ are duplicates and fight rel=prev/next.
+  const page = loaderData?.page ?? 1;
   const base = buildMeta({
     title: "Browse",
-    description: "Browse every upcoming film we track…",
+    description:
+      "Browse every upcoming film we track, with poster art, release years, and a link to each film's full update history.",
     pathname: location.pathname,
+    search: page > 1 ? `?page=${page}` : undefined,
     type: "website",
   });
 
   if (!loaderData) return base;
 
-  const { page, totalPages, films } = loaderData;
-  const canonical = new URL(location.pathname, env.publicSiteUrl).toString();
+  const { totalPages, films } = loaderData;
+  const browseUrl = new URL(location.pathname, env.publicSiteUrl).toString();
+  const pageUrl = (n: number) => (n > 1 ? `${browseUrl}?page=${n}` : browseUrl);
 
   if (page > 1) {
-    base.push({ tagName: "link", rel: "prev", href: `${canonical}?page=${page - 1}` });
+    base.push({ tagName: "link", rel: "prev", href: pageUrl(page - 1) });
   }
   if (page < totalPages) {
-    base.push({ tagName: "link", rel: "next", href: `${canonical}?page=${page + 1}` });
+    base.push({ tagName: "link", rel: "next", href: pageUrl(page + 1) });
   }
   if (page > totalPages && films.total > 0) {
     base.push({ name: "robots", content: "noindex" });
@@ -50,10 +56,22 @@ export default function BrowsePage({ loaderData }: Route.ComponentProps) {
   const { films, page, totalPages } = loaderData;
 
   if (films.items.length === 0) {
+    // total > 0 means the index has films but this page is past the end (e.g. ?page=999),
+    // not that the catalog is empty — don't claim "No films tracked yet" in that case.
+    const pastEnd = films.total > 0;
     return (
       <main className="mx-auto max-w-7xl px-4 py-16 text-center">
         <h1 className="text-2xl font-semibold">Browse Films</h1>
-        <p className="mt-6 text-sm text-gray-500">No films tracked yet — check back soon.</p>
+        <p className="mt-6 text-sm text-gray-500">
+          {pastEnd
+            ? "That page is past the end of the list."
+            : "No films tracked yet — check back soon."}
+        </p>
+        {pastEnd && (
+          <Link to="/browse" className="mt-6 inline-block text-sm text-blue-600 underline">
+            Back to the first page
+          </Link>
+        )}
       </main>
     );
   }

@@ -62,6 +62,31 @@ describe("sitemap.xml", () => {
     expect(body).toContain(`<loc>${APP_BASE}/browse</loc>`);
   });
 
+  it("anchors the /browse entry to the site origin even when the first <loc> is a deep path", async () => {
+    const APP_BASE = "https://app.upmovies.localhost";
+    const xml = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      "<urlset>",
+      `<url><loc>${APP_BASE}/film/the-odyssey-2026</loc></url>`,
+      "</urlset>",
+    ].join("\n");
+    server.use(
+      http.get(`${BACKEND}/sitemap.xml`, () =>
+        HttpResponse.xml(xml, { headers: { "Content-Type": "application/xml" } }),
+      ),
+    );
+
+    const res = await loader({
+      request: new Request("https://upmovies.example/sitemap.xml"),
+      context: contextWithEnv(),
+      params: {},
+    } as unknown as Route.LoaderArgs);
+
+    const body = await res.text();
+    expect(body).toContain(`<loc>${APP_BASE}/browse</loc>`);
+    expect(body).not.toContain("/film/the-odyssey-2026/browse");
+  });
+
   it("returns 503 with an empty sitemap when the backend is unreachable", async () => {
     server.use(http.get(`${BACKEND}/sitemap.xml`, () => HttpResponse.error()));
 
