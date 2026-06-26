@@ -150,6 +150,29 @@ describe("SearchBox dropdown", () => {
     expect(screen.getByText(/no films match/i)).toBeInTheDocument();
   });
 
+  it("announces the result count via a persistent aria-live status region", async () => {
+    server.use(filmsSearchHandler({ items: [sampleItem] }));
+    renderSearchBox();
+    const user = userEvent.setup();
+    const input = screen.getByRole("combobox");
+    await user.type(input, "od");
+    await screen.findByRole("listbox");
+    expect(screen.getByRole("status")).toHaveTextContent(/1 result/i);
+  });
+
+  it("announces no results via the status region rather than a selectable option", async () => {
+    server.use(filmsSearchHandler({ items: [] }));
+    renderSearchBox();
+    const user = userEvent.setup();
+    const input = screen.getByRole("combobox");
+    await user.type(input, "xyzzy");
+    await screen.findByRole("listbox");
+    // The no-results copy must not be exposed as a selectable listbox option.
+    expect(screen.queryByRole("option")).toBeNull();
+    // The empty state is announced through the live region instead.
+    expect(screen.getByRole("status")).toHaveTextContent(/no films found/i);
+  });
+
   it("closes the dropdown gracefully on a 500 error but keeps the form", async () => {
     server.use(filmsSearchHandler({ status: 500 }));
     renderSearchBox();

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { server } from "@/test/msw/server";
 import { cloudflareContext } from "@/lib/load-context";
 import { filmsSearchHandler } from "@/test/msw/films-search";
-import SearchPage, { loader } from "@/routes/search";
+import SearchPage, { ErrorBoundary, loader } from "@/routes/search";
 import type { FilmIndexItem } from "@/api/types";
 
 const BACKEND = "https://api.upmovies.localhost";
@@ -126,5 +126,20 @@ describe("search route render", () => {
     ]);
     render(<Stub initialEntries={["/search"]} />);
     expect(await screen.findByText(/Type a film title/i)).toBeInTheDocument();
+  });
+
+  it("renders the ErrorBoundary when the loader throws", async () => {
+    const Stub = createRoutesStub([
+      {
+        path: "/search",
+        Component: SearchPage,
+        ErrorBoundary,
+        loader: () => {
+          throw new Error("search failed");
+        },
+      },
+    ]);
+    render(<Stub initialEntries={["/search?q=matrix"]} />);
+    expect(await screen.findByText(/couldn.t run that search/i)).toBeInTheDocument();
   });
 });

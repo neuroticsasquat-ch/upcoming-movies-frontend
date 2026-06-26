@@ -44,6 +44,16 @@ export function SearchBox() {
 
   const activeDescendant = mounted && activeIndex >= 0 ? `search-opt-${activeIndex}` : undefined;
 
+  // Screen-reader announcement for the result count / no-results state. Driven off
+  // the live results so the persistent status region (below) mutates in place —
+  // a region that only mounts together with its text doesn't reliably announce.
+  const announcement =
+    showDropdown && results !== null
+      ? results.length === 0
+        ? "No films found."
+        : `${results.length} result${results.length === 1 ? "" : "s"} found.`
+      : "";
+
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     setInputValue(e.target.value);
     // Reset dropdown state whenever the user changes the query
@@ -113,6 +123,13 @@ export function SearchBox() {
           Search
         </Button>
       </form>
+      {/* Persistent (post-hydration) live region so result-count / no-results
+          announcements fire when its text changes, not when it first mounts. */}
+      {mounted && (
+        <div role="status" aria-live="polite" className="sr-only">
+          {announcement}
+        </div>
+      )}
       {showDropdown && (
         <ul
           id="search-listbox"
@@ -129,12 +146,10 @@ export function SearchBox() {
             />
           ))}
           {results?.length === 0 && (
-            <li
-              role="option"
-              aria-selected={false}
-              className="px-3 py-2 text-sm text-muted-foreground"
-            >
-              <span aria-live="polite">No films match &quot;{inputValue}&quot;</span>
+            // Not a selectable option — a visible status message for sighted users;
+            // screen readers are served by the aria-live region above.
+            <li role="presentation" className="px-3 py-2 text-sm text-muted-foreground">
+              No films match &quot;{inputValue}&quot;
             </li>
           )}
           {results && results.length > 0 && (
