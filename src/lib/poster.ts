@@ -4,3 +4,8 @@ export function posterUrl(path: string | null, size: string): string | null {
   if (!path) return null;
   return `${env.tmdbImageBase}/${size}${path}`;
 }
+
+export function backdropUrl(path: string | null, size: string): string | null {
+  if (!path) return null;
+  return `${env.tmdbImageBase}/${size}${path}`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { posterUrl } from "@/lib/poster";
+import { backdropUrl, posterUrl } from "@/lib/poster";
 
 describe("posterUrl", () => {
   it("builds a TMDB URL from a path and size", () => {
@@ -8,5 +8,15 @@ describe("posterUrl", () => {
 
   it("returns null when the path is null", () => {
     expect(posterUrl(null, "w342")).toBeNull();
+  });
+});
+
+describe("backdropUrl", () => {
+  it("builds a TMDB URL from a path and size", () => {
+    expect(backdropUrl("/b.jpg", "w780")).toBe("https://image.tmdb.org/t/p/w780/b.jpg");
+  });
+
+  it("returns null when the path is null", () => {
+    expect(backdropUrl(null, "w780")).toBeNull();
   });
 });
