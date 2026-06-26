@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { MemoryRouter, createRoutesStub } from "react-router";
+import { MemoryRouter, Outlet, createRoutesStub } from "react-router";
 import { server } from "@/test/msw/server";
 import { filmsSearchHandler } from "@/test/msw/films-search";
 import { SearchBox } from "@/components/search/SearchBox";
@@ -163,5 +163,51 @@ describe("SearchBox dropdown", () => {
     });
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(screen.getByRole("search")).toBeInTheDocument();
+  });
+
+  it("closes the dropdown after selecting a result while the header persists", async () => {
+    server.use(filmsSearchHandler({ items: [sampleItem] }));
+    // SearchBox lives in a persistent layout that stays mounted across navigation.
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: () => (
+          <>
+            <SearchBox />
+            <Outlet />
+          </>
+        ),
+        children: [
+          { index: true, Component: () => <div>home-page</div> },
+          { path: "film/:slug", Component: () => <div>film-page</div> },
+        ],
+      },
+    ]);
+    render(<Stub initialEntries={["/"]} />);
+    const user = userEvent.setup();
+    const input = screen.getByRole("combobox");
+    await user.type(input, "od");
+    await screen.findByRole("listbox");
+    await user.click(screen.getByRole("link", { name: /The Odyssey/i }));
+    expect(await screen.findByText("film-page")).toBeInTheDocument();
+    // The dropdown must not linger over the destination page; the form persists.
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(screen.getByRole("search")).toBeInTheDocument();
+  });
+
+  it("closes the dropdown when focus leaves the search box", async () => {
+    server.use(filmsSearchHandler({ items: [sampleItem] }));
+    render(
+      <MemoryRouter>
+        <SearchBox />
+        <button type="button">outside</button>
+      </MemoryRouter>,
+    );
+    const user = userEvent.setup();
+    const input = screen.getByRole("combobox");
+    await user.type(input, "od");
+    await screen.findByRole("listbox");
+    await user.click(screen.getByRole("button", { name: "outside" }));
+    expect(screen.queryByRole("listbox")).toBeNull();
   });
 });

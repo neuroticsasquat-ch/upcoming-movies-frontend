@@ -51,6 +51,13 @@ describe("search route loader", () => {
     expect(data.results).toBeNull();
     expect(data.q).toBe("");
   });
+
+  it("returns the current page and totalPages derived from results.total", async () => {
+    server.use(filmsSearchHandler({ items: [sampleItem], total: 45 }));
+    const data = await callLoader("https://upmovies.example/search?q=matrix&page=2");
+    expect(data.page).toBe(2);
+    expect(data.totalPages).toBe(3); // ceil(45 / 20)
+  });
 });
 
 describe("search route render", () => {
@@ -58,6 +65,8 @@ describe("search route render", () => {
     const loaderData = {
       q: "matrix",
       results: { items: [sampleItem], total: 1, limit: 20, offset: 0 },
+      page: 1,
+      totalPages: 1,
     };
     const Stub = createRoutesStub([
       { path: "/search", Component: SearchPage, loader: () => loaderData },
@@ -65,6 +74,37 @@ describe("search route render", () => {
     render(<Stub initialEntries={["/search"]} />);
     const link = await screen.findByRole("link", { name: /The Matrix/i });
     expect(link).toHaveAttribute("href", "/film/the-matrix-1999");
+  });
+
+  it("renders pagination with a Next link that preserves q when total exceeds one page", async () => {
+    const loaderData = {
+      q: "matrix",
+      results: { items: [sampleItem], total: 45, limit: 20, offset: 0 },
+      page: 1,
+      totalPages: 3,
+    };
+    const Stub = createRoutesStub([
+      { path: "/search", Component: SearchPage, loader: () => loaderData },
+    ]);
+    render(<Stub initialEntries={["/search?q=matrix"]} />);
+    expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
+    const next = screen.getByRole("link", { name: /next/i });
+    expect(next).toHaveAttribute("href", "/search?q=matrix&page=2");
+  });
+
+  it("renders a past-end message (not no-results) when the page is past the end", async () => {
+    const loaderData = {
+      q: "matrix",
+      results: { items: [], total: 45, limit: 20, offset: 19980 },
+      page: 999,
+      totalPages: 3,
+    };
+    const Stub = createRoutesStub([
+      { path: "/search", Component: SearchPage, loader: () => loaderData },
+    ]);
+    render(<Stub initialEntries={["/search?q=matrix&page=999"]} />);
+    expect(await screen.findByText(/past the end/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No films match/i)).toBeNull();
   });
 
   it("renders the no-results state when items is empty", async () => {
