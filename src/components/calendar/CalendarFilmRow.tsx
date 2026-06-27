@@ -1,10 +1,9 @@
 import { Link } from "react-router";
-import type { FeedDayItem } from "@/api/types";
+import type { CalendarItem } from "@/api/types";
 
-/** One (film, day) row for the home feed: just the film title + year, the whole
- *  row linked. The home feed only signals that a film has an update that day — not
- *  how many or what kind. Zebra-striped within its day list. */
-export function FeedDayCard({ item }: { item: FeedDayItem }) {
+/** One calendar row: film title + year, the whole row linked to /film/{slug}. Mirrors the
+ *  home-feed row; zebra-striped within its release-type group. */
+export function CalendarFilmRow({ item }: { item: CalendarItem }) {
   return (
     <Link
       to={`/film/${item.film_slug}`}
