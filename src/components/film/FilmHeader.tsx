@@ -2,7 +2,7 @@ import type { FilmDetail } from "@/api/types";
 import { formatRuntime, pickRating } from "@/lib/format";
 import { posterUrl } from "@/lib/poster";
 import { ArcStepper } from "./ArcStepper";
-import { ARC_STAGE_LABELS } from "./labels";
+import { arcStageLabel } from "./labels";
 import { ExternalLinks } from "./ExternalLinks";
 
 /** Title + parenthetical year, then the poster beside the production-status arc
@@ -15,7 +15,7 @@ export function FilmHeader({ film }: { film: FilmDetail }) {
   const poster = posterUrl(film.poster_path, "w342");
   const runtime = film.runtime != null && film.runtime > 0 ? formatRuntime(film.runtime) : null;
   const rating = pickRating(film.release_dates);
-  const yearOrStage = film.release_year ?? ARC_STAGE_LABELS[film.arc_stage];
+  const yearOrStage = film.release_year ?? arcStageLabel(film.arc_stage);
 
   const billing: [string, string[]][] = (
     [

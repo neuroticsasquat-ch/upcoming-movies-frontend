@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { FilmIndexItem } from "@/api/types";
-import { ARC_STAGE_LABELS } from "@/components/film/labels";
+import { arcStageLabel } from "@/components/film/labels";
 import { posterUrl } from "@/lib/poster";
 
 interface SearchResultItemProps {
@@ -29,7 +29,7 @@ export function SearchResultItem({ item, isActive, id }: SearchResultItemProps) 
         )}
         <span className="truncate text-sm">{item.title}</span>
         <span className="ml-auto text-xs text-muted-foreground">
-          {item.release_year ?? ARC_STAGE_LABELS[item.arc_stage]}
+          {item.release_year ?? arcStageLabel(item.arc_stage)}
         </span>
       </Link>
     </li>

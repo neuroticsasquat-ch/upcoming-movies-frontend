@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { FeedDayItem } from "@/api/types";
-import { ARC_STAGE_LABELS } from "@/components/film/labels";
+import { arcStageLabel } from "@/components/film/labels";
 
 /** One (film, day) row for the home feed: just the film title + year, the whole
  *  row linked. An undated film shows its arc-stage label ("Announced") in the year's
@@ -17,7 +17,7 @@ export function FeedDayCard({ item }: { item: FeedDayItem }) {
       {item.film_title}
       <span className="font-normal text-muted-foreground">
         {" "}
-        ({item.release_year ?? ARC_STAGE_LABELS[item.arc_stage]})
+        ({item.release_year ?? arcStageLabel(item.arc_stage)})
       </span>
     </Link>
   );
