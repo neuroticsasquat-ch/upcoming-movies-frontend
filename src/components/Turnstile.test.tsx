@@ -61,3 +61,27 @@ describe("Turnstile", () => {
     await waitFor(() => expect(turnstile.renderCount()).toBe(1));
   });
 });
+
+describe("Turnstile without a site key", () => {
+  let turnstile: FakeTurnstile;
+
+  beforeEach(() => {
+    turnstile = installFakeTurnstile({ autoSolve: false });
+    // Production build with VITE_TURNSTILE_SITE_KEY unset: `env.ts` leaves it empty rather
+    // than falling back to the always-passes test key.
+    vi.spyOn(env, "turnstileSiteKey", "get").mockReturnValue("");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    turnstile.uninstall();
+    vi.restoreAllMocks();
+  });
+
+  it("renders no widget and reports itself unavailable", async () => {
+    const onUnavailable = vi.fn();
+    render(<Turnstile onToken={() => {}} onUnavailable={onUnavailable} />);
+    await waitFor(() => expect(onUnavailable).toHaveBeenCalled());
+    expect(turnstile.renderCount()).toBe(0);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("VITE_TURNSTILE_SITE_KEY"));
+  });
+});

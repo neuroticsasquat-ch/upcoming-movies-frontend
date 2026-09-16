@@ -91,6 +91,15 @@ export function Turnstile({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    // No site key means the build never got VITE_TURNSTILE_SITE_KEY (`env.ts` refuses to
+    // guess one outside dev). Say so rather than rendering an empty box: the caller shows
+    // the user a failure and blocks the submit, and the console line names the variable for
+    // whoever has to fix the deploy.
+    if (!env.turnstileSiteKey) {
+      console.error("VITE_TURNSTILE_SITE_KEY is not set; the signup bot check cannot render.");
+      onUnavailableRef.current?.();
+      return;
+    }
     let cancelled = false;
     let widgetId: string | null = null;
 

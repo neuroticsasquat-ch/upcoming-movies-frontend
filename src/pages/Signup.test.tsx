@@ -224,6 +224,35 @@ describe("Signup", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/briefly unavailable/i);
   });
 
+  it("keeps saying the bot check couldn't load when submit is attempted anyway", async () => {
+    turnstile.uninstall();
+    turnstile = installFakeTurnstile({ autoSolve: false });
+    server.use(loggedOut());
+    renderAt("/signup");
+    await waitFor(() => expect(turnstile.renderCount()).toBe(1));
+    turnstile.fail();
+    await fillCommonFields();
+    await submit();
+    // Not downgraded to "complete the check below", which would point at a widget the user
+    // has no way to complete.
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load/i);
+  });
+
+  it("asks for an invite instead of blaming one when signup is closed (403, none entered)", async () => {
+    server.use(
+      loggedOut(),
+      http.post(`${env.apiBaseUrl}/auth/signup`, () =>
+        HttpResponse.json({ detail: "invalid_invite" }, { status: 403 }),
+      ),
+    );
+    renderAt("/signup");
+    await fillCommonFields();
+    await submit();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/invite-only right now/i);
+    // And the field is opened so there is somewhere to put the code being asked for.
+    expect(screen.getByLabelText(/invite code/i)).toBeInTheDocument();
+  });
+
   it("explains a bot check that cannot load at all", async () => {
     turnstile.uninstall();
     turnstile = installFakeTurnstile({ autoSolve: false });

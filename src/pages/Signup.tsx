@@ -32,6 +32,14 @@ function retryHint(err: ApiError): string {
   return `in ${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 
+/**
+ * Shown both when the widget reports itself unavailable and when a submit is attempted while
+ * it still is. One string, because the second case must not silently downgrade to "complete
+ * the check below" and point at a widget that was never rendered.
+ */
+const WIDGET_UNAVAILABLE_MESSAGE =
+  "The bot check couldn't load, so signup can't continue. Disable any ad blocker for this page and reload.";
+
 export function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +52,7 @@ export function Signup() {
   // than pre-filling something they'd have to go looking for to see.
   const [inviteOpen, setInviteOpen] = useState(() => params.has("invite"));
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [widgetUnavailable, setWidgetUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // Bumped on every failed attempt to remount <Turnstile> — siteverify spends the token, so
@@ -58,7 +67,11 @@ export function Signup() {
       return;
     }
     if (!turnstileToken) {
-      setError("Please complete the “I'm not a robot” check below.");
+      setError(
+        widgetUnavailable
+          ? WIDGET_UNAVAILABLE_MESSAGE
+          : "Please complete the “I'm not a robot” check below.",
+      );
       return;
     }
     setSubmitting(true);
@@ -78,7 +91,14 @@ export function Signup() {
       if (err instanceof ApiError) {
         const detail = detailOf(err);
         if (err.status === 403 && detail === "invalid_invite") {
-          setError("That invite code is invalid, already used, or doesn't match this email.");
+          // With SIGNUP_OPEN off the API raises this for a caller who supplied no code at
+          // all, so the message has to ask for one rather than blame one they never typed.
+          if (inviteCode.trim()) {
+            setError("That invite code is invalid, already used, or doesn't match this email.");
+          } else {
+            setError("Signups are invite-only right now. Enter the invite code you were sent.");
+            setInviteOpen(true);
+          }
         } else if (err.status === 403) {
           setError("That bot check didn't go through. Please try it again.");
         } else if (err.status === 409) {
@@ -102,6 +122,7 @@ export function Signup() {
     }
     // Only reached on failure — the happy path returned above and is navigating away.
     setTurnstileToken(null);
+    setWidgetUnavailable(false);
     setChallenge((n) => n + 1);
   }
 
@@ -192,9 +213,10 @@ export function Signup() {
         <Turnstile
           key={challenge}
           onToken={setTurnstileToken}
-          onUnavailable={() =>
-            setError("The bot check couldn't load. Disable any ad blocker for this page and retry.")
-          }
+          onUnavailable={() => {
+            setWidgetUnavailable(true);
+            setError(WIDGET_UNAVAILABLE_MESSAGE);
+          }}
         />
         {error && (
           <p role="alert" className="text-sm text-red-600">
