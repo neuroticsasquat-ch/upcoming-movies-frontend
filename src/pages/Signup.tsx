@@ -3,8 +3,34 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { ApiError } from "@/api/client";
 import { useAuth } from "@/components/AuthContext";
+import { Turnstile } from "@/components/Turnstile";
 import { Input } from "@/components/ui/input";
 import { SITE_NAME } from "@/lib/seo";
+
+/** The `detail` string the API puts on every error body it raises deliberately. */
+function detailOf(err: ApiError): string | null {
+  const body = err.body;
+  if (body && typeof body === "object" && "detail" in body && typeof body.detail === "string") {
+    return body.detail;
+  }
+  return null;
+}
+
+/** `retry_after` off a 429 body, rendered the way a person would say it. */
+function retryHint(err: ApiError): string {
+  const body = err.body;
+  const seconds =
+    body &&
+    typeof body === "object" &&
+    "retry_after" in body &&
+    typeof body.retry_after === "number"
+      ? body.retry_after
+      : null;
+  if (seconds === null) return "in a little while";
+  if (seconds < 60) return `in ${seconds} second${seconds === 1 ? "" : "s"}`;
+  const minutes = Math.ceil(seconds / 60);
+  return `in ${minutes} minute${minutes === 1 ? "" : "s"}`;
+}
 
 export function Signup() {
   const { signup } = useAuth();
@@ -14,8 +40,15 @@ export function Signup() {
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState(() => params.get("invite") ?? "");
+  // An `?invite=` link is someone being handed a comp code: open the field for them rather
+  // than pre-filling something they'd have to go looking for to see.
+  const [inviteOpen, setInviteOpen] = useState(() => params.has("invite"));
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Bumped on every failed attempt to remount <Turnstile> — siteverify spends the token, so
+  // a retry with the one already in hand would be refused as a replay.
+  const [challenge, setChallenge] = useState(0);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,48 +57,58 @@ export function Signup() {
       setError("Password must be at least 8 characters.");
       return;
     }
-    if (!inviteCode.trim()) {
-      setError("An invite code is required to sign up.");
+    if (!turnstileToken) {
+      setError("Please complete the “I'm not a robot” check below.");
       return;
     }
     setSubmitting(true);
     try {
-      await signup(email, password, displayName, inviteCode.trim());
+      await signup({
+        email,
+        password,
+        displayName,
+        turnstileToken,
+        inviteCode: inviteCode.trim() || undefined,
+      });
+      // M3's onboarding takes over this landing at `/welcome` (D-17); until it exists the
+      // new account goes straight to the feed.
       navigate("/");
+      return;
     } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setError("Invite code is invalid, already used, or doesn't match this email.");
-      } else if (err instanceof ApiError && err.status === 409) {
-        setError("This email is already registered.");
-      } else if (err instanceof ApiError && err.status === 422) {
-        setError("Please check your input and try again.");
+      if (err instanceof ApiError) {
+        const detail = detailOf(err);
+        if (err.status === 403 && detail === "invalid_invite") {
+          setError("That invite code is invalid, already used, or doesn't match this email.");
+        } else if (err.status === 403) {
+          setError("That bot check didn't go through. Please try it again.");
+        } else if (err.status === 409) {
+          setError("This email is already registered.");
+        } else if (err.status === 422) {
+          setError("Please check your input and try again.");
+        } else if (err.status === 429) {
+          setError(
+            `Too many signup attempts from your network. Please try again ${retryHint(err)}.`,
+          );
+        } else if (err.status === 503) {
+          setError("Signups are briefly unavailable. Please try again in a few minutes.");
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
       } else {
         setError("Something went wrong. Please try again.");
       }
     } finally {
       setSubmitting(false);
     }
+    // Only reached on failure — the happy path returned above and is navigating away.
+    setTurnstileToken(null);
+    setChallenge((n) => n + 1);
   }
 
   return (
     <div className="mx-auto max-w-sm py-12">
       <h1 className="text-2xl font-semibold mb-6">Create your {SITE_NAME} account</h1>
       <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="invite_code" className="block text-sm">
-            Invite code
-          </label>
-          <Input
-            id="invite_code"
-            type="text"
-            required
-            value={inviteCode}
-            onChange={(e) => setInviteCode(e.target.value)}
-            className="mt-1"
-            autoComplete="off"
-          />
-          <p className="text-xs text-gray-500 mt-1">{SITE_NAME} is invite-only during beta.</p>
-        </div>
         <div>
           <label htmlFor="email" className="block text-sm">
             Email
@@ -116,7 +159,48 @@ export function Signup() {
           />
           <p className="text-xs text-gray-500 mt-1">At least 8 characters.</p>
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div>
+          <button
+            type="button"
+            onClick={() => setInviteOpen((open) => !open)}
+            aria-expanded={inviteOpen}
+            aria-controls="invite-code-field"
+            className="text-sm text-gray-600 underline"
+          >
+            Have an invite code?
+          </button>
+          {inviteOpen && (
+            <div id="invite-code-field" className="mt-2">
+              <label htmlFor="invite_code" className="block text-sm">
+                Invite code
+              </label>
+              <Input
+                id="invite_code"
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                aria-describedby="invite-code-help"
+                className="mt-1"
+                autoComplete="off"
+              />
+              <p id="invite-code-help" className="text-xs text-gray-500 mt-1">
+                Optional — anyone can sign up. A code just links your account to whoever sent it.
+              </p>
+            </div>
+          )}
+        </div>
+        <Turnstile
+          key={challenge}
+          onToken={setTurnstileToken}
+          onUnavailable={() =>
+            setError("The bot check couldn't load. Disable any ad blocker for this page and retry.")
+          }
+        />
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
         <button
           type="submit"
           disabled={submitting}
