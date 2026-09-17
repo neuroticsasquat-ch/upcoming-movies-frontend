@@ -195,7 +195,7 @@ describe("home route — signed in without a grant", () => {
 
     await screen.findByRole("heading", { name: /your timeline is not open yet/i });
     expect(screen.queryByText(/your timeline is empty/i)).toBeNull();
-    expect(screen.queryByRole("link", { name: /find films to follow/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /get started/i })).toBeNull();
     // Nor the anonymous sign-in line — they are already signed in.
     expect(screen.queryByText(/see a timeline of the people you follow/i)).toBeNull();
   });
@@ -249,10 +249,7 @@ describe("home route — signed in and entitled", () => {
 
     await timelineHeading();
     expect(await screen.findByText(/your timeline is empty/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /find films to follow/i })).toHaveAttribute(
-      "href",
-      "/calendar",
-    );
+    expect(screen.getByRole("link", { name: /get started/i })).toHaveAttribute("href", "/calendar");
     expect(screen.getByRole("link", { name: /browse all updates/i })).toHaveAttribute(
       "href",
       "/feed",
@@ -361,6 +358,59 @@ function renderHomeWith(extra: React.ReactNode) {
     </QueryClientProvider>,
   );
 }
+
+describe("home route — the timeline could not be read", () => {
+  it("says so rather than showing the onboarding card", async () => {
+    // An error is not `total === 0`. Falling through to the empty state would tell an entitled
+    // reader to go and follow things they may already follow.
+    server.use(
+      meHandler({ entitled: true }),
+      http.get(`${env.apiBaseUrl}/me/timeline`, () =>
+        HttpResponse.json({ detail: "server_error" }, { status: 500 }),
+      ),
+    );
+    renderHome();
+
+    expect(await screen.findByText(/couldn't load your timeline/i)).toBeInTheDocument();
+    expect(screen.queryByText(/your timeline is empty/i)).toBeNull();
+    expect(screen.getByRole("link", { name: /browse all updates/i })).toHaveAttribute(
+      "href",
+      "/feed",
+    );
+  });
+
+  it("falls back to the locked panel when the grant lapsed mid-session", async () => {
+    // The cached account still said `entitled`, so the timeline mounted and got a 403. Re-reading
+    // /me flips the flag, and the island must land on "no access yet" — never "no follows yet".
+    let meCalls = 0;
+    server.use(
+      http.get(`${env.apiBaseUrl}/me`, () => {
+        meCalls += 1;
+        return HttpResponse.json({
+          id: "u1",
+          email: "a@b.com",
+          display_name: "Test User",
+          is_admin: false,
+          email_verified: true,
+          // Entitled on the first read only: the grant runs out between the two.
+          entitled: meCalls === 1,
+          created_at: "2026-06-23T12:00:00Z",
+          csrf_token: "test-csrf",
+        });
+      }),
+      lockedTimelineHandler(),
+    );
+    renderHome();
+
+    expect(
+      await screen.findByRole("heading", { name: /your timeline is not open yet/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/your timeline is empty/i)).toBeNull();
+    expect(screen.queryByText(/couldn't load your timeline/i)).toBeNull();
+    // And the global feed the server already sent is what they are left looking at.
+    expect(screen.getByRole("heading", { name: GLOBAL_HEADING })).toBeInTheDocument();
+  });
+});
 
 describe("home route — cache behaviour around the swap", () => {
   it("falls back to the SSR'd feed on logout, with no round trip for it", async () => {

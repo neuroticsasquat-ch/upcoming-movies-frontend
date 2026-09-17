@@ -172,15 +172,14 @@ export function useToggleFollow() {
       }
       toast.error(error instanceof Error ? error.message : "Failed to update your follows");
     },
-    // The timeline is the feed filtered by exactly this list (D-11), so a follow that lands
+    // The timeline is the feed filtered by exactly this list (D-11), so a follow that *lands*
     // changes which films belong on it. Invalidating every page of it rather than patching one
     // keeps the reader from having to guess why a newly followed director's day is missing.
-    // The watchlist below has no such line: it does not feed the timeline.
-    onSettled: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: followsKey }),
-        qc.invalidateQueries({ queryKey: timelineKey }),
-      ]),
+    // On success only, unlike the follows list below: a failed follow is rolled back to the
+    // graph the timeline was already built from, so re-reading it would fetch the same days.
+    // The watchlist has no such line at all — it does not feed the timeline.
+    onSuccess: () => qc.invalidateQueries({ queryKey: timelineKey }),
+    onSettled: () => qc.invalidateQueries({ queryKey: followsKey }),
   });
 }
 

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { fetchTimeline, useTimeline } from "@/api/me";
+import { fetchTimeline, isEntitlementError, useTimeline } from "@/api/me";
+import { useAuth } from "@/components/AuthContext";
 import type { FeedDayItem, FeedDayResponse } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { groupByDay } from "@/lib/feed-groups";
@@ -16,7 +17,17 @@ import { FeedDayGroups, ViewMoreButton } from "@/components/feed/FeedDayGroups";
  * `/feed/grouped`'s exact shape, so there is nothing here to translate.
  */
 export function TimelinePage() {
+  const { refresh } = useAuth();
   const first = useTimeline({ limit: DAYS_PER_PAGE, offset: 0 });
+
+  // A grant that lapses mid-session shows up here and nowhere else: the cached account still
+  // says `entitled`, so this page mounted, and the request came back 403. Re-reading `/me` flips
+  // the flag, and the island re-renders this page as the locked panel — the "no access yet"
+  // state, which is the one thing that must not be confused with "no follows yet" (D-41).
+  const lapsed = first.isError && isEntitlementError(first.error);
+  useEffect(() => {
+    if (lapsed) void refresh();
+  }, [lapsed, refresh]);
   // Pages 2+ are fetched imperatively and appended, the same way the global feed pages: it keeps
   // one cache entry per reader rather than one per scroll depth, and "View more" stays a plain
   // button rather than a second source of truth about what is on screen.
@@ -28,7 +39,10 @@ export function TimelinePage() {
   const [more, setMore] = useState<{ from?: FeedDayResponse; items: FeedDayItem[] }>({ items: [] });
   const [loading, setLoading] = useState(false);
 
-  if (first.isPending) return <TimelineSkeleton />;
+  // The skeleton covers the re-read as well as the first load: the panel is one render away,
+  // and flashing an error in between would name the wrong problem.
+  if (first.isPending || lapsed) return <TimelineSkeleton />;
+  if (first.isError) return <TimelineUnavailable />;
 
   const total = first.data?.total ?? 0;
   const appended = more.from === first.data ? more.items : [];
@@ -99,6 +113,26 @@ function TimelineSkeleton() {
   );
 }
 
+/** The timeline could not be read. Deliberately not the empty-state card: "we could not load
+ *  this" and "there is nothing here yet" are different things to tell a reader, and showing the
+ *  onboarding copy on a failed request would send someone to follow things they may already
+ *  follow. The entitlement 403 never reaches here — it is handled above, as a lapsed grant. */
+function TimelineUnavailable() {
+  return (
+    <div className="mt-6 rounded-lg border border-border p-6">
+      <p className="text-sm text-foreground">We couldn&apos;t load your timeline just now.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Please try again in a moment — everything we track is still there in the meantime.
+      </p>
+      <div className="mt-4">
+        <Button asChild size="sm" variant="outline">
+          <Link to="/feed">Browse all updates</Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** An entitled account whose follow graph is still empty. Distinct from the locked panel an
  *  unentitled one gets (D-41): this reader *may* follow things and simply has not yet, so every
  *  word here is an instruction rather than an explanation. Never an empty page. */
@@ -116,7 +150,7 @@ function EmptyTimeline() {
             route exists it points at the calendar, which is the browse surface that actually
             ships today. Sending them to a 404 would be worse than sending them one hop wide. */}
         <Button asChild size="sm">
-          <Link to="/calendar">Find films to follow</Link>
+          <Link to="/calendar">Get started</Link>
         </Button>
         <Button asChild size="sm" variant="outline">
           <Link to="/feed">Browse all updates</Link>
