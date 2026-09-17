@@ -75,6 +75,12 @@ export function useImportJob(jobId: string | null) {
     enabled: jobId !== null,
     retry: false,
     refetchInterval: (query) => {
+      // A failed poll stops the clock as well as a finished job. `retry: false` only ends the
+      // retries *within* one fetch; without this the interval keeps firing, and since an error
+      // leaves `data` undefined the check below would read it as "no answer yet, keep asking".
+      // Harmless for an id that came from a fresh 202, permanent for one restored from storage
+      // (`lib/tmdb-import`), which is how a 404 turns into a request every two seconds forever.
+      if (query.state.status === "error") return false;
       const status = query.state.data?.status;
       // No data yet is "keep asking" rather than "stop": the first poll has not answered.
       return status && isTerminal(status) ? false : POLL_INTERVAL_MS;

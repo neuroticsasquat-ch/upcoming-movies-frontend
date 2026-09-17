@@ -87,23 +87,38 @@ function SucceededReport({ job }: { job: ImportJob }) {
         {job.watchlist_created} {job.watchlist_created === 1 ? "watchlist film" : "watchlist films"}{" "}
         added.
       </p>
-      {job.unmatched.length > 0 && <UnmatchedList unmatched={job.unmatched} />}
+      {job.unmatched.length > 0 && <UnmatchedList unmatched={job.unmatched} source={job.source} />}
     </>
   );
 }
 
-/** The titles the import refused to guess at (D-15). Listed in full rather than counted: the
- *  point of reporting them is that the user can go and find those few films by hand, which a
- *  number alone does not let them do. */
-function UnmatchedList({ unmatched }: { unmatched: ImportJob["unmatched"] }) {
+/** The titles the import could not bring in. Listed in full rather than counted: the point of
+ *  reporting them is that the user can go and find those few films by hand, which a number alone
+ *  does not let them do.
+ *
+ *  The two sources leave rows here for opposite reasons, so they cannot share a sentence. A
+ *  Letterboxd row is a title we declined to guess at (D-15). A TMDB row is a film TMDB itself
+ *  answered 404 for (`kind=tmdb_missing`, NEU-1357 §3) — there was no matching to decline,
+ *  because the ids were TMDB's own to begin with. */
+function UnmatchedList({
+  unmatched,
+  source,
+}: {
+  unmatched: ImportJob["unmatched"];
+  source: string;
+}) {
+  const fromTmdb = source === TMDB_SOURCE;
+
   return (
     <details className="mt-3">
       <summary className="cursor-pointer text-sm text-foreground">
-        {unmatched.length} {unmatched.length === 1 ? "title" : "titles"} we could not match
+        {unmatched.length} {unmatched.length === 1 ? "title" : "titles"} we could not{" "}
+        {fromTmdb ? "bring over" : "match"}
       </summary>
       <p className="mt-1 text-xs text-muted-foreground">
-        We only match a film when the title and year line up exactly, so these were left alone
-        rather than guessed at. You can search for them here and follow them yourself.
+        {fromTmdb
+          ? "These are on your TMDB account, but TMDB no longer has a film behind them — so there was nothing to import. They are listed rather than dropped quietly."
+          : "We only match a film when the title and year line up exactly, so these were left alone rather than guessed at. You can search for them here and follow them yourself."}
       </p>
       <ul className="mt-2 space-y-1">
         {unmatched.map((row) => (

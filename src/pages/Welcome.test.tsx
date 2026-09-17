@@ -328,6 +328,9 @@ describe("Welcome", () => {
         await screen.findByRole("heading", { name: /not open to everyone yet/i }),
       ).toBeInTheDocument();
       await waitFor(() => expect(callback.posted).toHaveLength(1));
+      // And having spent the approval, the locked panel owns up to it rather than leaving the
+      // user to guess what happened to the thing they just approved at TMDB (D-41).
+      expect(await screen.findByRole("alert")).toHaveTextContent(/part of the subscription/i);
     });
 
     it("leaves an ordinary visit alone", async () => {

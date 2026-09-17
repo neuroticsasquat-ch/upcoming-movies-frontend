@@ -124,7 +124,7 @@ export function Welcome() {
   // credential the one-shot design has no other way to clean up (NEU-1357, D-39).
   const tmdb = useTmdbReturn(setJobId);
 
-  if (access === "locked") return <LockedWelcome />;
+  if (access === "locked") return <LockedWelcome tmdbError={tmdb.error} />;
 
   const next = () => setStep((current) => (current === 2 ? current : ((current + 1) as Step)));
 
@@ -228,9 +228,18 @@ function DoneStep() {
  *  into three steps whose first request would 403. The copy is the onboarding route's own —
  *  this user came here to set something up, so "come back and we will" is the honest answer,
  *  not the follows page's "your follows are not open yet". */
-function LockedWelcome() {
+function LockedWelcome({ tmdbError }: { tmdbError: string | null }) {
   return (
     <LockedPanel heading="We are not open to everyone yet">
+      {/* An account whose grant lapsed between approving at TMDB and landing back here has just
+          had an approval refused, and the panel's own copy does not account for it. Saying so is
+          what keeps the locked state honest (D-41): the user did something, and it did not
+          work. */}
+      {tmdbError && (
+        <p role="alert" className="mt-2 text-sm text-red-600">
+          {tmdbError}
+        </p>
+      )}
       <p className="mt-2 text-sm text-muted-foreground">
         Following people and importing your library are part of the subscription, and access is
         limited while we build that tier. There is nothing to buy yet — your account is ready and

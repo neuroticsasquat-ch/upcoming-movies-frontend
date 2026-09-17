@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { env } from "@/env";
 import { server } from "@/test/msw/server";
 import { importJobHandlers, makeImportJob, makeTmdbJob } from "@/test/msw/imports";
 import { rememberTmdbImport } from "@/lib/tmdb-import";
+import { POLL_INTERVAL_MS } from "@/api/imports";
 import type { ImportJob } from "@/api/types";
 import { TmdbConnect } from "./TmdbConnect";
 
@@ -97,18 +98,28 @@ describe("TmdbConnect", () => {
     expect(await screen.findByText(/last imported from/i)).toHaveTextContent(/@freshly_connected/i);
   });
 
-  it("falls back to the plain button when the remembered job is gone", async () => {
+  it("falls back to the plain button when the remembered job is gone, and stops asking", async () => {
     rememberTmdbImport("44444444-4444-4444-8444-444444444444");
-    // A job id this account no longer owns: the poll does not retry a 404 (`api/imports`), so
-    // the panel has to answer for it on the first try.
+    // A job id this account no longer owns. Unlike an id from a fresh 202 this one is restored
+    // from storage on every visit, so "the poll never stops" is not a blip that resolves when
+    // the page closes — it is a request every two seconds for as long as the tab is open.
+    let polls = 0;
     server.use(
-      http.get(`${env.apiBaseUrl}/me/import/:jobId`, () =>
-        HttpResponse.json({ detail: "import_job_not_found" }, { status: 404 }),
-      ),
+      http.get(`${env.apiBaseUrl}/me/import/:jobId`, () => {
+        polls += 1;
+        return HttpResponse.json({ detail: "import_job_not_found" }, { status: 404 });
+      }),
     );
     renderPanel();
 
     expect(await screen.findByRole("link", { name: /connect tmdb/i })).toBeInTheDocument();
     expect(screen.queryByText(/last imported from/i)).not.toBeInTheDocument();
-  });
+
+    await waitFor(() => expect(polls).toBe(1));
+    // Comfortably past two poll intervals: a failed poll must not be retried on the clock.
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS * 2));
+    expect(polls).toBe(1);
+    // Real time rather than fake timers: the interval lives inside TanStack Query, and the
+    // point of the assertion is that the scheduler it actually runs on never fires again.
+  }, 15000);
 });
