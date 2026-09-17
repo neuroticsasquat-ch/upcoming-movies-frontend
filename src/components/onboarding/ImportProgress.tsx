@@ -1,3 +1,4 @@
+import { TMDB_SOURCE } from "@/api/imports";
 import type { ImportJob } from "@/api/types";
 
 /** Report on one import job, whatever state it is in (NEU-1356 §1).
@@ -24,7 +25,10 @@ export function ImportProgress({ job }: { job: ImportJob }) {
           <p className="text-sm font-medium text-red-600">We could not finish that import.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {job.error ?? "The import stopped before it finished."} Anything imported before it
-            stopped is kept — you can upload the file again to pick up the rest.
+            stopped is kept —{" "}
+            {job.source === TMDB_SOURCE
+              ? "connect TMDB again to pick up the rest."
+              : "you can upload the file again to pick up the rest."}
           </p>
         </>
       )}
@@ -57,8 +61,14 @@ function RunningProgress({ job }: { job: ImportJob }) {
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {job.rows_done} of {job.rows_total} films checked. Every title is looked up against TMDB, so
-        a large library takes a few minutes — you can carry on and it will keep going.
+        {job.rows_done} of {job.rows_total} films {job.source === TMDB_SOURCE ? "read" : "checked"}.{" "}
+        {job.source === TMDB_SOURCE
+          ? // A TMDB import needs no title resolution — the ids are already TMDB's (NEU-1357 §3)
+            // — so the minutes go on reading paged lists and crediting the favourites, not on
+            // matching. Saying "looked up against TMDB" here would describe work that is not
+            // happening.
+            "We are reading your watchlist and favourites a page at a time — you can carry on and it will keep going."
+          : "Every title is looked up against TMDB, so a large library takes a few minutes — you can carry on and it will keep going."}
       </p>
     </>
   );
@@ -67,7 +77,11 @@ function RunningProgress({ job }: { job: ImportJob }) {
 function SucceededReport({ job }: { job: ImportJob }) {
   return (
     <>
-      <p className="text-sm font-medium text-foreground">Import finished.</p>
+      <p className="text-sm font-medium text-foreground">
+        {job.source === TMDB_SOURCE && job.tmdb_username !== null
+          ? `Import finished, from @${job.tmdb_username}.`
+          : "Import finished."}
+      </p>
       <p className="mt-1 text-sm text-muted-foreground">
         {job.follows_created} {job.follows_created === 1 ? "follow" : "follows"} and{" "}
         {job.watchlist_created} {job.watchlist_created === 1 ? "watchlist film" : "watchlist films"}{" "}
