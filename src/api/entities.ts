@@ -29,6 +29,9 @@ export interface EntityResult {
  *  and asking it on the first keystroke would spend a request per letter to say so. */
 export const MIN_QUERY_LEN = 2;
 
+/** The page the box shows. Deliberately not paged: the follow box is a "find the one I mean"
+ *  control, not a browser, and a user who cannot see their target in ten types a better query.
+ *  The total beside it is what keeps that honest. */
 const RESULT_LIMIT = 10;
 
 /** One search, already flattened: the endpoint and its shape-flattener bound together so the
@@ -39,7 +42,15 @@ type EntitySearch = (
   baseUrl: string,
   q: string,
   signal: AbortSignal | undefined,
-) => Promise<EntityResult[]>;
+) => Promise<EntityPage>;
+
+/** A page of results plus how many there were in total, which is what lets the box say it is
+ *  showing the first ten of ninety rather than silently truncating — the company and
+ *  collection searches are alphabetical, so a common word genuinely has more behind it. */
+export interface EntityPage {
+  items: EntityResult[];
+  total: number;
+}
 
 function bind<T>(
   fetcher: (
@@ -51,7 +62,7 @@ function bind<T>(
 ): EntitySearch {
   return async (baseUrl, q, signal) => {
     const res = await fetcher(baseUrl, q, { limit: RESULT_LIMIT, signal });
-    return res.items.map(normalise);
+    return { items: res.items.map(normalise), total: res.total };
   };
 }
 
@@ -83,9 +94,9 @@ export const entitySearchKey = (entityType: SearchableEntityType, q: string) =>
   ["entity-search", entityType, q] as const;
 
 /**
- * Search one kind of follow target. Public, so it works for an unentitled account too — the
- * follows page is gated above this, but the endpoint is not, and keeping the hook ungated
- * means the film page could use it later without a second copy.
+ * Search one kind of follow target. Ungated, because the endpoint is: entity search stays
+ * public so the film page's follow buttons can render before anyone knows whether the visitor
+ * is entitled. The follows page is gated above this instead.
  *
  * Results are cached per (type, query), which is what makes flipping the type selector back
  * and forth free, and the 5-minute `staleTime` what keeps re-typing a query the user just ran

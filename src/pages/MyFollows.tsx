@@ -9,11 +9,11 @@ import { profileUrl } from "@/lib/poster";
 
 /** The groups, in the order they appear. Fixed rather than derived from the data so the page
  *  does not reshuffle its headings as the user follows things. */
-const GROUPS: { type: FollowEntityType; heading: string; empty: string }[] = [
-  { type: "person", heading: "People", empty: "No people followed yet." },
-  { type: "company", heading: "Companies", empty: "No companies followed yet." },
-  { type: "franchise", heading: "Collections", empty: "No collections followed yet." },
-  { type: "title", heading: "Films", empty: "No films followed yet." },
+const GROUPS: { type: FollowEntityType; heading: string }[] = [
+  { type: "person", heading: "People" },
+  { type: "company", heading: "Companies" },
+  { type: "franchise", heading: "Collections" },
+  { type: "title", heading: "Films" },
 ];
 
 /** Where a follow came from, shown only when it is not the user's own click — "manual" is the
