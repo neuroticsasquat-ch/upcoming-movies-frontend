@@ -55,8 +55,8 @@ describe("GlobalHeader", () => {
         "href",
         "/calendar",
       );
-      expect(within(nav).queryByRole("link", { name: /^everything$/i })).toBeNull();
-      expect(within(nav).queryByRole("link", { name: /all updates/i })).toBeNull();
+      expect(within(nav).queryByRole("link", { name: /^all updates$/i })).toBeNull();
+      expect(within(nav).queryByRole("link", { name: /^my feed$/i })).toBeNull();
       expect(within(nav).queryByRole("link", { name: /^browse$/i })).toBeNull();
       expect(within(nav).queryByRole("link", { name: /^search$/i })).toBeNull();
     });
@@ -65,9 +65,9 @@ describe("GlobalHeader", () => {
       server.use(meHandler({ entitled: true }));
       renderHeader();
 
-      const following = await within(primaryNav()).findByRole("link", { name: /^following$/i });
-      expect(following).toHaveAttribute("href", "/");
-      expect(within(primaryNav()).getByRole("link", { name: /^everything$/i })).toHaveAttribute(
+      const myFeed = await within(primaryNav()).findByRole("link", { name: /^my feed$/i });
+      expect(myFeed).toHaveAttribute("href", "/");
+      expect(within(primaryNav()).getByRole("link", { name: /^all updates$/i })).toHaveAttribute(
         "href",
         "/feed",
       );
@@ -81,7 +81,7 @@ describe("GlobalHeader", () => {
       // the locked state and not merely the pre-auth render.
       await screen.findByRole("button", { name: /account menu/i });
       expect(within(primaryNav()).getByRole("link", { name: /^updates$/i })).toBeInTheDocument();
-      expect(within(primaryNav()).queryByRole("link", { name: /^everything$/i })).toBeNull();
+      expect(within(primaryNav()).queryByRole("link", { name: /^all updates$/i })).toBeNull();
     });
   });
 

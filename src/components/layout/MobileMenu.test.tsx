@@ -44,17 +44,17 @@ describe("NavMenu", () => {
       "/calendar",
     );
     // `/` and `/feed` render the same page for this reader, so only one is named.
-    expect(within(nav).queryByRole("link", { name: /everything/i })).toBeNull();
-    expect(within(nav).queryByRole("link", { name: /all updates/i })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /^all updates$/i })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /^my feed$/i })).toBeNull();
   });
 
   it("names both feeds for an entitled account", async () => {
     server.use(meHandler({ entitled: true }));
     renderMenu();
 
-    const following = await screen.findByRole("link", { name: /^following$/i });
-    expect(following).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: /^everything$/i })).toHaveAttribute("href", "/feed");
+    const myFeed = await screen.findByRole("link", { name: /^my feed$/i });
+    expect(myFeed).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /^all updates$/i })).toHaveAttribute("href", "/feed");
     expect(screen.queryByRole("link", { name: /^updates$/i })).toBeNull();
   });
 
@@ -65,7 +65,7 @@ describe("NavMenu", () => {
     renderMenu();
 
     expect(await screen.findByRole("link", { name: /^updates$/i })).toHaveAttribute("href", "/");
-    expect(screen.queryByRole("link", { name: /^everything$/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^all updates$/i })).toBeNull();
   });
 
   it("offers Log in when logged out", async () => {

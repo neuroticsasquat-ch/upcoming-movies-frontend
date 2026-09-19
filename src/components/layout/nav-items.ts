@@ -27,10 +27,15 @@ const CALENDAR: NavItem = { label: "Calendar", href: "/calendar" };
  * The labels for a reader who *does* have both say which feed is which. "Updates" and "All
  * updates" did not: nothing in the pair conveyed that the first was narrowed to the people
  * you follow and the second was everything we track.
+ *
+ * **Each label is the name of the page it leads to**, not a separate word for it. "All
+ * updates" is what `/feed` already calls itself in its heading and its `<title>`; "My feed"
+ * is what `/` is renamed to. A nav that says one thing and lands on a page headed another
+ * makes the reader check whether they arrived.
  */
 export function navItemsFor(access: FollowAccess): NavItem[] {
   if (access === "ready") {
-    return [{ label: "Following", href: "/" }, { label: "Everything", href: "/feed" }, CALENDAR];
+    return [{ label: "My feed", href: "/" }, { label: "All updates", href: "/feed" }, CALENDAR];
   }
   // `/feed` keeps working and stays in the sitemap; it is just not worth a nav entry when it
   // is a second door onto the page the reader is already looking at.
