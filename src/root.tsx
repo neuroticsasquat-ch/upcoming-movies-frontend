@@ -20,7 +20,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Same-origin, no cookies — deliberately no crossorigin attribute. */}
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="#0f172a" />
-        {/* Redundant with the manifest on iOS 16.4+, belt-and-braces below it. */}
+        {/* Redundant with the manifest on iOS 16.4+, belt-and-braces below it. The
+            unprefixed tag is the standardised form Chrome wants; the apple-prefixed one
+            stays for iOS before 16.4, which only understands that spelling. */}
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <meta name="apple-mobile-web-app-title" content="backlotter" />

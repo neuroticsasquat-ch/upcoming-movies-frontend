@@ -63,7 +63,9 @@ describe("root Layout head", () => {
   });
 
   it("carries the Apple standalone metas", () => {
-    // Belt-and-braces below the manifest for iOS versions before 16.4.
+    // Belt-and-braces below the manifest for iOS versions before 16.4. Chrome warns on
+    // the apple-prefixed capability tag alone, so the standardised spelling ships too.
+    expect(markup()).toContain('name="mobile-web-app-capable" content="yes"');
     expect(markup()).toContain('name="apple-mobile-web-app-capable" content="yes"');
     expect(markup()).toContain('name="apple-mobile-web-app-status-bar-style" content="black"');
     expect(markup()).toContain('name="apple-mobile-web-app-title" content="backlotter"');
