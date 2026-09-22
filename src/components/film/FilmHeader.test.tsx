@@ -164,6 +164,54 @@ describe("FilmHeader", () => {
     expect(screen.getAllByText("Christopher Nolan").length).toBeGreaterThan(0);
   });
 
+  it("links the billing rows to their person pages (EF-16)", () => {
+    // The most prominent person names on the page, and the ones that stayed plain text when
+    // NEU-1419 linked the cast and crew *lists*. With the row buttons gone the link is the
+    // only way to reach a director from here, so an unlinked one is a person the reader
+    // cannot follow at all.
+    const Stub = createRoutesStub([
+      {
+        path: "/film/:ref",
+        Component: () => (
+          <FilmHeader
+            film={{
+              ...film,
+              crew: [
+                {
+                  name: "Christopher Nolan",
+                  job: "Director",
+                  department: "Directing",
+                  person_id: 525,
+                },
+                { name: "Jonathan Nolan", job: "Story", department: "Writing", person_id: 527 },
+              ],
+            }}
+          />
+        ),
+      },
+    ]);
+    render(<Stub initialEntries={["/film/the-odyssey-2026"]} />);
+
+    expect(screen.getByRole("link", { name: "Christopher Nolan" })).toHaveAttribute(
+      "href",
+      "/person/525-christopher-nolan",
+    );
+    // A Story credit is linked too. It never carried a follow button, on D-11's seed grade,
+    // which is exactly the gap the link closes.
+    expect(screen.getByRole("link", { name: "Jonathan Nolan" })).toHaveAttribute(
+      "href",
+      "/person/527-jonathan-nolan",
+    );
+  });
+
+  it("leaves a billing name the payload cannot identify as plain text", () => {
+    // The default fixture's crew carries no `person_id` — today's every case for the public
+    // film DTO — and a link here would point at `/person/undefined`.
+    render(<FilmHeader film={film} />);
+    expect(screen.queryByRole("link", { name: "Christopher Nolan" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Christopher Nolan").length).toBeGreaterThan(0);
+  });
+
   it("renders the IMDb and TMDB links in the header", () => {
     render(<FilmHeader film={film} />);
     expect(screen.getByRole("link", { name: /imdb/i })).toBeInTheDocument();

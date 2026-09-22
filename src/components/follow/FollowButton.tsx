@@ -5,8 +5,9 @@ import { LockedToggle, SignInToggle, useFollowAccess } from "./access";
 
 /** How loudly the button asks. `quiet` is the default and what every row control uses — an
  *  outline that sits inside a list without competing with it. `primary` is for the one button
- *  that is the page's reason to be there, which is the film page's title follow and the entity
- *  pages' own (EF-16, EF-17): a filled button, so the page has a single obvious action. The
+ *  that is the page's reason to be there — today only the film page's title follow (EF-16),
+ *  where it is the one control left: a filled button, so the page has a single obvious
+ *  action. The entity pages draw the `quiet` one inside their header. The
  *  distinction is only in the *unfollowed* state; once followed, both read as `secondary`,
  *  because a done thing should stop shouting. */
 export type FollowEmphasis = "quiet" | "primary";

@@ -1,11 +1,12 @@
 import { Link } from "react-router";
-import type { FilmDetail } from "@/api/types";
+import type { CrewMember, FilmDetail } from "@/api/types";
 import { formatRuntime, pickRating } from "@/lib/format";
 import { posterUrl } from "@/lib/poster";
 import { collectionTarget, franchisePath, titleTarget } from "@/lib/film-entities";
 import { latestTrailerKey } from "@/lib/trailers";
 import { TitleFollowButton } from "@/components/follow/TitleFollowButton";
 import { FOLLOW_CUE } from "@/components/follow/access";
+import { PersonName } from "./PersonName";
 import { ArcStepper } from "./ArcStepper";
 import { ExternalLinks } from "./ExternalLinks";
 import { TrailerEmbed } from "./TrailerEmbed";
@@ -35,7 +36,12 @@ export function FilmHeader({ film }: { film: FilmDetail }) {
   // film has collected since (D-35).
   const trailerKey = latestTrailerKey(film.day_groups);
 
-  const billing: [string, string[]][] = (
+  // The crew members themselves, not their names: these are the most prominent person names
+  // on the page and EF-16 wants every one of them linked, which needs the `person_id` a bare
+  // string has already thrown away. `PersonName` decides linked-or-not from the same
+  // `personTarget` test the credit lists use, so the header cannot disagree with the block
+  // below it about who the catalog can identify.
+  const billing: [string, CrewMember[]][] = (
     [
       ["Director", "Director"],
       ["Screenplay", "Screenplay"],
@@ -44,10 +50,9 @@ export function FilmHeader({ film }: { film: FilmDetail }) {
     ] as const
   )
     .map(
-      ([label, job]) =>
-        [label, film.crew.filter((c) => c.job === job).map((c) => c.name)] as [string, string[]],
+      ([label, job]) => [label, film.crew.filter((c) => c.job === job)] as [string, CrewMember[]],
     )
-    .filter(([, names]) => names.length > 0);
+    .filter(([, people]) => people.length > 0);
 
   return (
     <header>
@@ -103,12 +108,14 @@ export function FilmHeader({ film }: { film: FilmDetail }) {
             </dd>
           </>
         )}
-        {billing.map(([label, names]) => (
+        {billing.map(([label, people]) => (
           <div key={label} className="contents">
             <dt className="text-muted-foreground">{label}</dt>
             <dd>
-              {names.map((name, i) => (
-                <div key={`${name}-${i}`}>{name}</div>
+              {people.map((person, i) => (
+                <div key={`${person.name}-${i}`}>
+                  <PersonName person={person} />
+                </div>
               ))}
             </dd>
           </div>
