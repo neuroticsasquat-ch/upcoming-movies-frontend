@@ -20,10 +20,10 @@ const item: FeedDayItem = {
   events: [],
 };
 
-function renderCard(overrides: Partial<FeedDayItem> = {}, demoted?: boolean) {
+function renderCard(overrides: Partial<FeedDayItem> = {}) {
   render(
     <MemoryRouter>
-      <FeedDayCard item={{ ...item, ...overrides }} demoted={demoted} />
+      <FeedDayCard item={{ ...item, ...overrides }} />
     </MemoryRouter>,
   );
 }
@@ -325,55 +325,6 @@ describe("FeedDayCard", () => {
     });
     expect(screen.getByText("Trailer")).toBeInTheDocument();
     expect(screen.getByText("The official trailer was released.")).toBeInTheDocument();
-  });
-
-  it("renders event lines one step smaller when demoted", () => {
-    const events: FeedDayItem["events"] = [
-      {
-        event_id: "evt-1",
-        event_type: "release_date",
-        confidence: "confirmed",
-        created_at: "2026-06-23T12:00:00Z",
-        occurred_at: "2026-06-23T12:00:00Z",
-        summary: "Date set.",
-        summary_edited: false,
-        status: "published",
-        superseded_by: null,
-        video_key: null,
-        provenance: "catalog",
-        sources: [],
-      },
-    ];
-    renderCard({ events }, true);
-    const demotedLine = screen.getByText("Date set.", { exact: false });
-    expect(demotedLine.className).toContain("text-[11px]");
-    expect(demotedLine.className).not.toContain("text-xs");
-    // Only the event text drops a step: the title link reads the same in both sections.
-    expect(screen.getByRole("link").className).not.toContain("text-[11px]");
-  });
-
-  it("renders event lines at the normal size when not demoted", () => {
-    renderCard({
-      events: [
-        {
-          event_id: "evt-1",
-          event_type: "release_date",
-          confidence: "confirmed",
-          created_at: "2026-06-23T12:00:00Z",
-          occurred_at: "2026-06-23T12:00:00Z",
-          summary: "Date set.",
-          summary_edited: false,
-          status: "published",
-          superseded_by: null,
-          video_key: null,
-          provenance: "story",
-          sources: [],
-        },
-      ],
-    });
-    const line = screen.getByText("Date set.", { exact: false });
-    expect(line.className).toContain("text-xs");
-    expect(line.className).not.toContain("text-[11px]");
   });
 
   it("badges every event's confidence (D-9)", () => {

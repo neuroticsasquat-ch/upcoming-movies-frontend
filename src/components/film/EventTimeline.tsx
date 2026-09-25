@@ -11,22 +11,13 @@ function TmdbSubSection({ events, day }: { events: FilmEvent[]; day: string }) {
       <h4 className="px-2 pb-1.5 text-xs font-semibold tracking-wide text-foreground/80">
         {NOT_YET_REPORTED_LABEL}
       </h4>
-      <EventList events={events} day={day} demoted />
+      <EventList events={events} day={day} />
     </div>
   );
 }
 
-/** `day` is the group's heading date, handed to each card for its first-seen disclosure.
- *  `demoted` is the section's call, "Not yet reported" sets it (NEU-1467). */
-function EventList({
-  events,
-  day,
-  demoted = false,
-}: {
-  events: FilmEvent[];
-  day: string;
-  demoted?: boolean;
-}) {
+/** `day` is the group's heading date, handed to each card for its first-seen disclosure. */
+function EventList({ events, day }: { events: FilmEvent[]; day: string }) {
   return (
     <ol className="mt-2 space-y-4">
       {events.map((event, i) => (
@@ -34,7 +25,7 @@ function EventList({
           key={`${event.event_type}-${event.created_at}-${i}`}
           className="border-l-2 border-border pl-3"
         >
-          <EventCard event={event} day={day} demoted={demoted} />
+          <EventCard event={event} day={day} />
         </li>
       ))}
     </ol>

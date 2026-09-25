@@ -91,28 +91,23 @@ Applies to `/feed` (both routes) and `/me/timeline`, since both render `FeedDayG
 film page already behaves this way; the spec pins it with a test and changes nothing there for
 this bullet.
 
-### D-1467.4 — What the demotion is now: order, heading, type size
+### D-1467.4 — What the demotion is now: order and heading
 
-A "Not yet reported" beat is demoted in exactly three ways, on **both** surfaces:
+A "Not yet reported" beat is demoted in exactly two ways, on **both** surfaces:
 
 1. **Order** — within a day, "In the news" leads (`splitByNewsBacked` order, unchanged;
    `dayPosterLeads` unchanged).
 2. **Heading** — the section is named "Not yet reported" (NEU-1406 text and explainer, unchanged).
-3. **Type size** — the event text under "Not yet reported" is one step smaller than under
-   "In the news". Feed `FeedEvent` line: 12px → 11px (`text-xs` → `text-[11px]`). Film page
-   `EventCard` summary paragraph: 15px → 13px (`text-[15px]` → `text-[13px]`). Pills, the
-   confidence badge colours, the retraction marker, the first-seen line, the trailer embed and
-   the admin controls are unchanged. The title link on a feed row is unchanged: navigation
-   reads the same in both sections.
 
-Nothing else differs: same event line, same badges, same colours. Muting, opacity, collapsing,
-titles-only and "None today" are all retired forms.
+Nothing else differs: same event line, same size, weight, colour and contrast, same badges.
+Muting, opacity, a smaller type size, collapsing, titles-only and "None today" are all retired
+or rejected forms.
 
-Threading: both cards take a `demoted?: boolean` prop set by the **section** that renders them
-(`FeedDayGroups` for the `tmdb` section, `TmdbSubSection` on the film page). The card does not
-derive it from `news_backed`, `provenance` or `sources.length`: which section a row is in is
-the section's decision, and `provenance` in particular is the wrong axis (a catalog-born beat a
-trade later covers is news-backed).
+> **Revised 2026-09-25, before merge.** This decision first had a third part, **type size**:
+> event text under "Not yet reported" one step smaller (feed 12px → 11px, film page
+> 15px → 13px), threaded as a `demoted` prop set by the section. It was implemented and then
+> dropped at review, at Tom's call: a "Not yet reported" event description reads exactly like an
+> "In the news" one. The `demoted` prop went with it, since nothing else would read it.
 
 ### D-1467.5 — The explainer and the heading text are unchanged
 
@@ -126,8 +121,8 @@ ADR-0014's NEU-1205/1208/1212/1406 amendments say the ≤N-day credit-flap hold 
 the collapsed section". After this ticket that sentence is false. The amendment for NEU-1467
 restates the argument: the hold window's cost (a briefly stale "attached" card) is bounded,
 self-correcting, sits under a heading that names it as unreported, carries a `rumored` →
-`unconfirmed` badge on every such card, and is one type step smaller than trade news. That is
-the demotion; hiding is no longer part of it.
+`unconfirmed` badge on every such card, and is ordered after trade news. That is the demotion;
+hiding is no longer part of it.
 
 ### D-1467.7 — Deploy order: none required
 
@@ -169,23 +164,18 @@ Merge backend first anyway so the frontend PR's manual check can see real events
 - `SectionWrapper` renders `null` for an empty section; otherwise an `<h3>` with
   `"<label> (N movie(s))"` and the rows. No `<button>`, no `useState`, no "None today", no
   static count-less heading.
-- Both sections still render through `SectionWrapper` with `SECTION_BREAK`; the `tmdb` section
-  passes `demoted` to each `FeedDayCard`.
+- Both sections still render through `SectionWrapper` with `SECTION_BREAK`.
 - The `sections` array comment no longer says both sections always render.
 
 ### Frontend — `src/components/feed/FeedDayCard.tsx`
 
-- Accepts `demoted?: boolean`. When true, `FeedEvent` lines render at `text-[11px]` instead of
-  `text-xs`; nothing else in the row changes.
 - The inline-badge shape survives as the no-events fallback; the docblock says so and no longer
   says "a catalog row (which ships no events since NEU-1208)".
 
 ### Frontend — `src/components/film/EventCard.tsx`, `EventTimeline.tsx`
 
-- `EventCard` accepts `demoted?: boolean`; when true its summary paragraph is `text-[13px]`
-  instead of `text-[15px]`. Pills, markers, embed, sources, admin controls unchanged.
-- `TmdbSubSection` passes `demoted` to every card it renders; the "In the news" list does not.
-- Conditional sub-headings unchanged (already true; pinned below).
+- No change to either component: conditional sub-headings are already true (pinned below), and
+  both sections render the same card.
 
 ### Frontend tests
 
@@ -201,14 +191,12 @@ Merge backend first anyway so the frontend PR's manual check can see real events
   (`tagName === "H3"`) extends to "Not yet reported (N movies)". Tests at lines ~133–150 and
   ~257–259 that assert "None today" or an empty heading flip to `queryByText(...)` being null.
 - `FeedDayCard.test.tsx`: the badge tests stay green; rename "renders beat labels when events
-  are empty" to say it is the fallback. New: "renders event lines one step smaller when
-  demoted" (asserts the `text-[11px]` class on a demoted row's event line and `text-xs` on a
-  normal one).
-- `EventCard.test.tsx`: new "renders the summary one step smaller when demoted" (`text-[13px]`
-  vs `text-[15px]`); D-9 badge tests unchanged.
+  are empty" to say it is the fallback.
+- `EventCard.test.tsx`: unchanged.
 - `EventTimeline.test.tsx`: new "renders no In the news heading on a TMDB-only day and no Not
   yet reported heading on a news-only day" (pins bullet three); existing "confirmed badge under
-  Not yet reported" test stays and additionally asserts the demoted class on that card.
+  Not yet reported" test stays and additionally asserts both sections' summaries share one
+  class list.
 - `src/routes/feed.test.tsx` comment at ~306 updated (no longer "collapsed").
 - `labels.test.ts` unchanged.
 
@@ -217,8 +205,8 @@ Merge backend first anyway so the frontend PR's manual check can see real events
 - Backend `docs/adr/0014-catalog-sourced-events.md`: dated amendment (2026-09-25, NEU-1467)
   recording that NEU-1208's visibility demotion on the feed is reversed — catalog rows ship
   events again, the section is uncollapsed and static, empty sections are not rendered, "None
-  today" is retired — and that the demotion is now order + heading + type size on both
-  surfaces (superseding NEU-1207's label-only clause for the film page); restates the NEU-1205
+  today" is retired — and that the demotion is now order + heading on both surfaces (the
+  film page's NEU-1207 label-only demotion now describes the feed too); restates the NEU-1205
   argument per D-1467.6; notes NEU-1212's badges are now a no-events fallback and NEU-1406's
   heading and explainer stand.
 - Backend `CONTEXT.md`: "Credit oscillation" (the "confined to the collapsed … section" sentence)
@@ -243,4 +231,5 @@ Merge backend first anyway so the frontend PR's manual check can see real events
   app-wide (NEU-1451) and the events were already being fetched server-side. Revisit only if
   a real page proves heavy.
 - Colour or opacity changes to demoted rows (considered, rejected: the confidence badge's amber
-  must keep its contrast, and colour would be a fourth demotion axis).
+  must keep its contrast, and colour would be a third demotion axis). A smaller type size was
+  also dropped (see D-1467.4's revision note).

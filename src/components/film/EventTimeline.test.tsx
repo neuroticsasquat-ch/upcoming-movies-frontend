@@ -171,12 +171,9 @@ describe("EventTimeline", () => {
     expect(within(tmdbSection).queryByText("unconfirmed")).toBeNull();
     const newsSection = screen.getByText("In the news").parentElement!;
     expect(within(newsSection).getByText("unconfirmed")).toBeInTheDocument();
-    // Demoted one type step under Not yet reported, and only there (NEU-1467).
-    expect(screen.getByText("Release date set.", { exact: false }).className).toContain(
-      "text-[13px]",
-    );
-    expect(screen.getByText("Rumored casting.", { exact: false }).className).toContain(
-      "text-[15px]",
+    // Same type on both sides: the heading and the order are the whole demotion (NEU-1467).
+    expect(screen.getByText("Release date set.", { exact: false }).className).toBe(
+      screen.getByText("Rumored casting.", { exact: false }).className,
     );
   });
 

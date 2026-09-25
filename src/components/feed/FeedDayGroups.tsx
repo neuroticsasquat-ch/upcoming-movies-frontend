@@ -26,7 +26,7 @@ export function FeedDayGroups({ items }: { items: FeedDayItem[] }) {
       {groups.map((group) => {
         const { newsBacked, tmdbOnly } = splitByNewsBacked(group.items);
         // A day renders only the sections that have items — an empty one is silence, never a
-        // placeholder line (NEU-1467). The `tmdb` section's rows are demoted one type step.
+        // placeholder line (NEU-1467).
         const sections = [
           { key: "news", label: "In the news", items: newsBacked },
           { key: "tmdb", label: NOT_YET_REPORTED_LABEL, items: tmdbOnly },
@@ -46,11 +46,7 @@ export function FeedDayGroups({ items }: { items: FeedDayItem[] }) {
                 {sections.map((section) => (
                   <SectionWrapper key={section.key} section={section}>
                     {section.items.map((item) => (
-                      <FeedDayCard
-                        key={item.film_ref}
-                        item={item}
-                        demoted={section.key === "tmdb"}
-                      />
+                      <FeedDayCard key={item.film_ref} item={item} />
                     ))}
                   </SectionWrapper>
                 ))}

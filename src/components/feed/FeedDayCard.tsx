@@ -29,11 +29,9 @@ const CONFIDENCE_PILL = {
  *  ships catalog rows empty). Those badges need `indent-0`: the link's `-indent-3` hanging
  *  indent inherits into them, and an inline-block re-applies it to its own first line, which
  *  paints the label outside its own pill (NEU-1214).
- *  `demoted` is set by the section that renders the row ("Not yet reported"), never derived
- *  from the row: it sets the event lines one type step smaller, and nothing else (NEU-1467).
  *  Zebra-striped within its section — a day that carries both news-backed and TMDB-only
  *  updates renders them as two lists, and the stripe restarts under each. */
-export function FeedDayCard({ item, demoted = false }: { item: FeedDayItem; demoted?: boolean }) {
+export function FeedDayCard({ item }: { item: FeedDayItem }) {
   // A now_available beat's body names the providers a poll found the film on (D-28), so this row
   // is a surface where provider names render and TMDB's terms want JustWatch credited on it.
   // Keyed off `event_types` rather than the row's events, because the no-events fallback row has
@@ -62,12 +60,7 @@ export function FeedDayCard({ item, demoted = false }: { item: FeedDayItem; demo
       {item.events.length > 0 && (
         <div className="mt-1 space-y-1.5 pl-3">
           {item.events.map((event) => (
-            <FeedEvent
-              key={event.event_id}
-              event={event}
-              filmRef={item.film_ref}
-              demoted={demoted}
-            />
+            <FeedEvent key={event.event_id} event={event} filmRef={item.film_ref} />
           ))}
         </div>
       )}
@@ -84,19 +77,11 @@ export function FeedDayCard({ item, demoted = false }: { item: FeedDayItem; demo
  *  superseded event, the D-2 "later retracted" marker — linked to the film page, since the
  *  retraction is a different day's card and so never on this row. No first-seen line: the feed
  *  is a publication log (ADR-0016), so its heading already says when this was published. */
-function FeedEvent({
-  event,
-  filmRef,
-  demoted,
-}: {
-  event: FilmEvent;
-  filmRef: string;
-  demoted: boolean;
-}) {
+function FeedEvent({ event, filmRef }: { event: FilmEvent; filmRef: string }) {
   const confidence = confidenceLabel(event.confidence);
   return (
     <div>
-      <p className={`${demoted ? "text-[11px]" : "text-xs"} leading-relaxed text-foreground`}>
+      <p className="text-xs leading-relaxed text-foreground">
         <span className={`mr-1 bg-muted text-muted-foreground ${PILL}`}>
           {eventTypeLabel(event.event_type)}
         </span>
