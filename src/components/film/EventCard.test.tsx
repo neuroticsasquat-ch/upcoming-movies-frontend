@@ -26,11 +26,11 @@ const event: FilmEvent = {
   sources: [{ url: "https://x.test/a", source: "ScreenRant", title: "t", published_at: null }],
 };
 
-function renderCard(overrides: Partial<FilmEvent> = {}, day?: string) {
+function renderCard(overrides: Partial<FilmEvent> = {}, day?: string, demoted?: boolean) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const cardEvent = { ...event, ...overrides };
   const router = createMemoryRouter([
-    { path: "/", element: <EventCard event={cardEvent} day={day} /> },
+    { path: "/", element: <EventCard event={cardEvent} day={day} demoted={demoted} /> },
   ]);
   render(
     <QueryClientProvider client={qc}>
@@ -55,6 +55,22 @@ it("badges a confirmed event as confirmed (D-9: confidence is visible on every c
   await screen.findByText("Bogus recast.");
   expect(screen.getByText("confirmed")).toBeInTheDocument();
   expect(screen.queryByText("unconfirmed")).toBeNull();
+});
+
+it("renders the summary one step smaller when demoted", async () => {
+  server.use(meHandler({ is_admin: false }));
+  renderCard({}, undefined, true);
+  const summary = (await screen.findByText("Bogus recast.")).closest("p")!;
+  expect(summary.className).toContain("text-[13px]");
+  expect(summary.className).not.toContain("text-[15px]");
+});
+
+it("renders the summary at the normal size when not demoted", async () => {
+  server.use(meHandler({ is_admin: false }));
+  renderCard();
+  const summary = (await screen.findByText("Bogus recast.")).closest("p")!;
+  expect(summary.className).toContain("text-[15px]");
+  expect(summary.className).not.toContain("text-[13px]");
 });
 
 it("badges a rumored event as unconfirmed", async () => {

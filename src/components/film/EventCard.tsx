@@ -23,8 +23,18 @@ const CONFIDENCE_PILL = {
 /** One event on the film page's timeline.
  *  `day` is the "YYYY-MM-DD" heading the card sits under. When the beat's `occurred_at` falls
  *  outside it the card discloses "first seen <date>" (D-9, the ADR-0016 residual) — a backdated
- *  beat otherwise carries no hint of the gap. Omitted, nothing is disclosed. */
-export function EventCard({ event, day }: { event: FilmEvent; day?: string }) {
+ *  beat otherwise carries no hint of the gap. Omitted, nothing is disclosed.
+ *  `demoted` is set by the "Not yet reported" section: the summary drops one type step, and
+ *  nothing else on the card changes (NEU-1467). */
+export function EventCard({
+  event,
+  day,
+  demoted = false,
+}: {
+  event: FilmEvent;
+  day?: string;
+  demoted?: boolean;
+}) {
   const { user } = useAuth();
   const revalidator = useRevalidator();
   const [busy, setBusy] = useState(false);
@@ -62,7 +72,7 @@ export function EventCard({ event, day }: { event: FilmEvent; day?: string }) {
 
   return (
     <article id={eventAnchorId(event.event_id)}>
-      <p className="text-[15px] leading-relaxed text-foreground">
+      <p className={`${demoted ? "text-[13px]" : "text-[15px]"} leading-relaxed text-foreground`}>
         <span className={`mr-2 bg-muted text-muted-foreground ${PILL}`}>
           {eventTypeLabel(event.event_type)}
         </span>
